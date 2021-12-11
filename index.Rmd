@@ -80,6 +80,8 @@ library(cluster)
 clusterr <- spotify_taylorswift %>% select(popularity, danceability, acousticness)
 silwidth <- vector()
 
+gower1 <- daisy(clusterr, metric = "gower")
+
 for(i in 2:10){
 q1<-clusterr%>%daisy("gower")%>%pam(k=i,diss=T)
   silwidth[i]<-q1$silinfo$avg.width
@@ -95,6 +97,11 @@ cluster_pam$silinfo$avg.width
 library(GGally)
 clusterr %>% mutate(cluster=as.factor(cluster_pam$clustering)) %>% 
   ggpairs(columns=1:3, aes(color=cluster))
+
+pam <- pam(gower1, k = 2, diss = T)  #tell pam you are using dissimilarities
+plot(pam, which = 2, color = "dark blue")
+
+plot(pam, which = 1)
 
 ```
 
@@ -121,6 +128,13 @@ summary(pca1, loadings=T)
 df <- pca1$scores %>% as.data.frame()
 
 df %>% ggplot(aes(x=Comp.1, y=Comp.2)) + geom_point(size=4)
+
+varprop = round(eigval/sum(eigval), 2)  #proportion of var explained by each PC
+ggplot() + geom_bar(aes(y = varprop, x = 1:3), stat = "identity") + 
+    xlab("PC") + geom_path(aes(y = varprop, x = 1:3)) + geom_text(aes(x = 1:3, 
+    y = varprop, label = round(varprop, 2)), vjust = -0.5, size = 4) + 
+    scale_y_continuous(breaks = seq(0, 0.6, 0.2), labels = scales::percent) + 
+    scale_x_continuous(breaks = 1:3, limits = c(0.5, 15))
 ```
 The PCs represent the correlation between popularity and danceability and acousticness. Scoring high/low on each of these components means there is either a high/low correlation between popularity and danceability and acousticness. A large number of my total variance in my dataset is explained by these PCs. I notice that if a song has high popularity, it tends to have high PC1 scores
 
@@ -165,6 +179,9 @@ prob_reg <- predict(logistic_fit)
 
 class_diag(prob_reg, spotify_taylorswift$Binary, positive="True")
 
+table(truth = factor(spotify_taylorswift$Binary == "True", levels = c("TRUE", 
+    "FALSE")), prediction = factor(prob_reg > 0.5, levels = c("TRUE", 
+    "FALSE")))
 
 ```
 
@@ -212,6 +229,10 @@ knn_fit <- knn3(Binary=="True" ~ danceability + acousticness, data=spotify_taylo
 prob_reg <- predict(knn_fit)
 diag_knn <- class_diag(prob_reg[,2], spotify_taylorswift$Binary, positive = "True")
 print(diag_knn)
+
+table(truth = factor(Binary== "True", levels = c("TRUE", 
+    "FALSE")), prediction = factor(prob_reg[, 1] > 0.5, levels = c("TRUE", 
+    "FALSE")))
 ```
 
 ```{R}
